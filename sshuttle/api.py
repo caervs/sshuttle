@@ -37,6 +37,17 @@ class Shuttle(object):
                         subnet='0/0',
                         verbose=True,
                         identity=None):
+        self.configure_shuttle(username, server, subnet, verbose, identity)
+        # TODO shuttle process watchdog
+        self.process = self._create_shuttle_process()
+        # HACK should somehow figure out when the routing is done
+        time.sleep(POST_START_SLEEP)
+
+
+    def configure_shuttle(self, username, server,
+                          subnet='0/0',
+                          verbose=True,
+                          identity=None):
         setup = ShuttleSetup(username, server, subnet, verbose, identity)
 
         if setup == self.setup:
@@ -54,10 +65,6 @@ class Shuttle(object):
 
         if setup.identity:
             self._create_agent()
-        # TODO shuttle process watchdog
-        self.process = self._create_shuttle_process()
-        # HACK should somehow figure out when the routing is done
-        time.sleep(POST_START_SLEEP)
 
     def _create_shuttle_process(self):
         """
