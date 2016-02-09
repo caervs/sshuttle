@@ -30,6 +30,8 @@ class ShuttleSetup(object):
 class Shuttle(object):
     def __init__(self):
         self.process = None
+        self.process_setup = None
+        self.agent_proc = None
         self.id_filepath = None
         self.setup = None
 
@@ -37,9 +39,14 @@ class Shuttle(object):
                         subnet='0/0',
                         verbose=True,
                         identity=None):
+        setup = ShuttleSetup(username, server, subnet, verbose, identity)
+        if setup == self.process_setup and self.process:
+            return
+
         self.configure_shuttle(username, server, subnet, verbose, identity)
         # TODO shuttle process watchdog
         self.process = self._create_shuttle_process()
+        self.process_setup = setup
         # HACK should somehow figure out when the routing is done
         time.sleep(POST_START_SLEEP)
 
@@ -63,13 +70,18 @@ class Shuttle(object):
 
         self.env = copy.deepcopy(os.environ)
 
-        if setup.identity:
-            self._create_agent()
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            self.id_filepath = f.name
+            f.write(self.setup.identity)
+
 
     def _create_shuttle_process(self):
         """
         return a subprocess.Popen for a process running an sshuttle client
         """
+        if self.setup.identity and not self.agent_proc:
+            self.agent_proc = self._create_agent()
+
         binary = os.path.join(PKGDIR, "sshuttle")
         target = "{}@{}".format(self.setup.username, self.setup.server)
         args = [binary, "-r", target, self.setup.subnet]
@@ -100,10 +112,6 @@ class Shuttle(object):
 
                 if key and value:
                     self.env[key] = value
-
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            self.id_filepath = f.name
-            f.write(self.setup.identity)
 
         return subprocess.Popen(["ssh-add", self.id_filepath],
                                 env=self.env).wait()
