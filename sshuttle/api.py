@@ -30,6 +30,7 @@ class ShuttleSetup(object):
 class Shuttle(object):
     def __init__(self):
         self.process = None
+        self.agent_proc = None
         self.id_filepath = None
         self.setup = None
 
@@ -63,13 +64,13 @@ class Shuttle(object):
 
         self.env = copy.deepcopy(os.environ)
 
-        if setup.identity:
-            self._create_agent()
-
     def _create_shuttle_process(self):
         """
         return a subprocess.Popen for a process running an sshuttle client
         """
+        if self.setup.identity and not self.agent_proc:
+            self.agent_proc = self._create_agent()
+
         binary = os.path.join(PKGDIR, "sshuttle")
         target = "{}@{}".format(self.setup.username, self.setup.server)
         args = [binary, "-r", target, self.setup.subnet]
